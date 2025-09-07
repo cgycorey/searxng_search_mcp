@@ -261,6 +261,12 @@ notepad %APPDATA%\Claude\claude_desktop_config.json
 }
 ```
 
+**Note:** The wheel file path `/full/path/to/searxng-search-mcp/dist/searxng_search_mcp-0.1.0-py3-none-any.whl` is generated after running `uv build` in your project directory. Make sure to build the package first:
+
+```bash
+uv build
+```
+
 **Important:**
 - Replace `/full/path/to/searxng-search-mcp/dist/searxng_search_mcp-0.1.0-py3-none-any.whl` with the actual path to your wheel file
 - Replace `https://your-searxng-instance.com` with your SearXNG instance URL
