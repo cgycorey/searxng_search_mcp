@@ -19,3 +19,12 @@
 - Use httpx for HTTP requests with 120s timeout
 - Follow strict mypy configuration (no untyped code allowed)
 - Use pytest for testing with @pytest.mark.asyncio for async tests
+
+# MCP Web Search Usage Rules
+- Use the `metasearch_web` tool when user requests web search functionality
+- Use the `fetch_web_content` tool when user requests to fetch and parse web page content
+- Default to markdown format for web content unless user specifies otherwise
+- Apply time range filters when user requests recent or time-specific information
+- Use language filters when user requests results in specific languages
+- Set appropriate safesearch levels based on content requirements
+- Handle search errors gracefully and provide informative error messages

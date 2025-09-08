@@ -2,7 +2,7 @@
 # This server provides web search and content fetching capabilities via SearXNG
 
 import os
-from typing import Any, Dict, Optional, cast, Mapping
+from typing import Any, Dict, Mapping, Optional, cast
 
 import html2text
 import httpx
@@ -15,12 +15,12 @@ from mcp.server.models import InitializationOptions
 
 class SearXNGClient:
     """Client for interacting with SearXNG search engine."""
-    
+
     def __init__(
         self, base_url: str, auth: Optional[tuple] = None, proxy: Optional[str] = None
     ):
         """Initialize the SearXNG client.
-        
+
         Args:
             base_url: The base URL of the SearXNG instance
             auth: Optional authentication tuple (username, password)
@@ -39,14 +39,14 @@ class SearXNGClient:
         safesearch: int = 0,
     ) -> Dict[str, Any]:
         """Perform a search query against SearXNG.
-        
+
         Args:
             query: Search query string
             pageno: Page number for results pagination
             time_range: Time range filter (day, week, month, year)
             language: Language code for results
             safesearch: Safe search level (0: none, 1: moderate, 2: strict)
-            
+
         Returns:
             Dictionary containing search results
         """
@@ -65,16 +65,18 @@ class SearXNGClient:
         async with httpx.AsyncClient(
             auth=self.auth, proxy=self.proxy, timeout=120.0
         ) as client:
-            response = await client.get(f"{self.base_url}/search", params=cast(Mapping[str, Any], params))
+            response = await client.get(
+                f"{self.base_url}/search", params=cast(Mapping[str, Any], params)
+            )
             response.raise_for_status()
             return cast(Dict[str, Any], response.json())
 
     async def fetch_url(self, url: str) -> str:
         """Fetch content from a URL.
-        
+
         Args:
             url: The URL to fetch content from
-            
+
         Returns:
             The HTML content as a string
         """
@@ -88,7 +90,7 @@ class SearXNGClient:
 
 class SearXNGServer:
     """MCP server for SearXNG search functionality."""
-    
+
     def __init__(self) -> None:
         """Initialize the SearXNG MCP server."""
         self.server = Server("searxng-search-mcp")
@@ -100,16 +102,16 @@ class SearXNGServer:
 
     def _create_client(self) -> SearXNGClient:
         """Create and configure the SearXNG client.
-        
+
         Reads configuration from environment variables:
         - SEARXNG_URL: Base URL of the SearXNG instance (required)
         - AUTH_USERNAME: Username for basic authentication (optional)
         - AUTH_PASSWORD: Password for basic authentication (optional)
         - HTTP_PROXY/HTTPS_PROXY: Proxy configuration (optional)
-        
+
         Returns:
             Configured SearXNGClient instance
-            
+
         Raises:
             ValueError: If SEARXNG_URL is not set
         """
@@ -133,7 +135,7 @@ class SearXNGServer:
             return [
                 types.Tool(
                     name="metasearch_web",
-                    description="Search the web using SearXNG",
+                    description="Search the web using SearXNG. After getting search results, you can fetch full content from any URL using the fetch_web_content tool.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -165,7 +167,7 @@ class SearXNGServer:
                 ),
                 types.Tool(
                     name="fetch_web_content",
-                    description="Fetch web page content in multiple formats (html, markdown, text, json)",
+                    description="Fetch full content from web page URLs (including URLs from search results). Supports multiple formats: html, markdown, text, json.",
                     inputSchema={
                         "type": "object",
                         "properties": {

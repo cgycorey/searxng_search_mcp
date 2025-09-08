@@ -39,7 +39,9 @@ async def test_searxng_search_success(mock_searxng_client: SearXNGClient) -> Non
 
 
 @pytest.mark.asyncio
-async def test_searxng_search_with_parameters(mock_searxng_client: SearXNGClient) -> None:
+async def test_searxng_search_with_parameters(
+    mock_searxng_client: SearXNGClient,
+) -> None:
     """Test SearXNG search with additional parameters"""
     mock_response = {"results": []}
     mock_searxng_client.search.return_value = mock_response
@@ -91,6 +93,33 @@ def test_searxng_server_tools() -> None:
         # We can't easily test the async handlers without a proper MCP setup
         assert hasattr(server, "_handle_web_search")
         assert hasattr(server, "_handle_web_url_read")
+
+
+@pytest.mark.asyncio
+async def test_searxng_search_error_handling(
+    mock_searxng_client: SearXNGClient,
+) -> None:
+    """Test SearXNG search error handling"""
+    import httpx
+
+    mock_searxng_client.search.side_effect = httpx.HTTPError("Network error")
+
+    with pytest.raises(httpx.HTTPError, match="Network error"):
+        await mock_searxng_client.search("test query")
+
+
+@pytest.mark.asyncio
+async def test_searxng_search_empty_response(
+    mock_searxng_client: SearXNGClient,
+) -> None:
+    """Test SearXNG search with empty response"""
+    mock_response = {"results": []}
+    mock_searxng_client.search.return_value = mock_response
+
+    result = await mock_searxng_client.search("empty query")
+
+    assert result == mock_response
+    assert result["results"] == []
 
 
 def test_project_structure() -> None:
