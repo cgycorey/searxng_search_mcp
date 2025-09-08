@@ -28,13 +28,19 @@ async def test_searxng_search_success(mock_searxng_client: SearXNGClient) -> Non
                 "url": "https://example.com",
                 "content": "Test content",
             }
-        ]
+        ],
+        "query": "test query",
+        "number_of_results": 1,
+        "answers": [],
     }
     mock_searxng_client.search.return_value = mock_response
 
     result = await mock_searxng_client.search("test query")
 
     assert result == mock_response
+    assert "results" in result
+    assert len(result["results"]) == 1
+    assert result["results"][0]["title"] == "Test Result"
     mock_searxng_client.search.assert_called_once_with("test query")
 
 
@@ -43,7 +49,12 @@ async def test_searxng_search_with_parameters(
     mock_searxng_client: SearXNGClient,
 ) -> None:
     """Test SearXNG search with additional parameters"""
-    mock_response = {"results": []}
+    mock_response = {
+        "results": [],
+        "query": "test",
+        "number_of_results": 0,
+        "answers": [],
+    }
     mock_searxng_client.search.return_value = mock_response
 
     await mock_searxng_client.search(
@@ -69,15 +80,21 @@ async def test_url_fetch_success(mock_searxng_client: SearXNGClient) -> None:
 
 def test_searxng_server_initialization() -> None:
     """Test SearXNG server initialization with environment variable"""
+    import os
+    from unittest.mock import patch
 
-    # This test will fail if SEARXNG_URL is not set
-    try:
+    # Test with environment variable set
+    with patch.dict(os.environ, {"SEARXNG_URL": "https://test.example.com"}):
         server = SearXNGServer()
         assert server.server.name == "searxng-search-mcp"
         assert hasattr(server, "client")
         assert hasattr(server, "h")
-    except ValueError as e:
-        assert "SEARXNG_URL environment variable is required" in str(e)
+        assert server.client.base_url == "https://test.example.com"
+
+    # Test without environment variable
+    with patch.dict(os.environ, {}, clear=True):
+        with pytest.raises(ValueError, match="SEARXNG_URL environment variable is required"):
+            SearXNGServer()
 
 
 def test_searxng_server_tools() -> None:
@@ -93,6 +110,11 @@ def test_searxng_server_tools() -> None:
         # We can't easily test the async handlers without a proper MCP setup
         assert hasattr(server, "_handle_web_search")
         assert hasattr(server, "_handle_web_url_read")
+        
+        # Test that server has the expected server instance
+        assert server.server is not None
+        assert hasattr(server.server, "list_tools")
+        assert hasattr(server.server, "call_tool")
 
 
 @pytest.mark.asyncio
@@ -102,9 +124,22 @@ async def test_searxng_search_error_handling(
     """Test SearXNG search error handling"""
     import httpx
 
+    # Test HTTPError
     mock_searxng_client.search.side_effect = httpx.HTTPError("Network error")
 
     with pytest.raises(httpx.HTTPError, match="Network error"):
+        await mock_searxng_client.search("test query")
+
+    # Test TimeoutException
+    mock_searxng_client.search.side_effect = httpx.TimeoutException("Request timeout")
+
+    with pytest.raises(httpx.TimeoutException, match="Request timeout"):
+        await mock_searxng_client.search("test query")
+
+    # Test RequestError
+    mock_searxng_client.search.side_effect = httpx.RequestError("Connection error")
+
+    with pytest.raises(httpx.RequestError, match="Connection error"):
         await mock_searxng_client.search("test query")
 
 
@@ -113,13 +148,20 @@ async def test_searxng_search_empty_response(
     mock_searxng_client: SearXNGClient,
 ) -> None:
     """Test SearXNG search with empty response"""
-    mock_response = {"results": []}
+    mock_response = {
+        "results": [],
+        "query": "empty query",
+        "number_of_results": 0,
+        "answers": [],
+    }
     mock_searxng_client.search.return_value = mock_response
 
     result = await mock_searxng_client.search("empty query")
 
     assert result == mock_response
+    assert "results" in result
     assert result["results"] == []
+    assert result["number_of_results"] == 0
 
 
 def test_project_structure() -> None:
@@ -132,6 +174,14 @@ def test_project_structure() -> None:
     assert os.path.exists("src/searxng_search_mcp/__main__.py")
     assert os.path.exists("pyproject.toml")
     assert os.path.exists("README.md")
+    assert os.path.exists("LICENSE")
+    assert os.path.exists("tests/")
+    assert os.path.exists("CRUSH.md")
+    
+    # Check that tests directory has test files
+    test_files = os.listdir("tests/")
+    assert len(test_files) > 0
+    assert any(file.startswith("test_") for file in test_files)
 
 
 if __name__ == "__main__":

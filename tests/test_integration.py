@@ -153,6 +153,11 @@ async def test_client_fetch_url_success() -> None:
     result = await client.fetch_url("https://example.com")
 
     assert result == expected_content
+    client.fetch_url.assert_called_once_with("https://example.com")
+    
+    # Test with different URLs
+    await client.fetch_url("https://another-example.com")
+    assert client.fetch_url.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -381,10 +386,14 @@ def test_client_url_normalization() -> None:
     client1 = SearXNGClient("https://example.com/")
     client2 = SearXNGClient("https://example.com")
     client3 = SearXNGClient("https://example.com/search/")
+    client4 = SearXNGClient("https://example.com/search")
+    client5 = SearXNGClient("https://example.com/search///")
 
     assert client1.base_url == "https://example.com"
     assert client2.base_url == "https://example.com"
     assert client3.base_url == "https://example.com/search"
+    assert client4.base_url == "https://example.com/search"
+    assert client5.base_url == "https://example.com/search"
 
 
 if __name__ == "__main__":

@@ -1,12 +1,12 @@
 # Build/Test/Lint Commands
-- Test single file: `pytest tests/test_server.py -v`
-- Test single function: `pytest tests/test_server.py::test_searxng_search_success -v`
-- Run all tests: `pytest -v`
-- Format code: `black src/ tests/`
-- Sort imports: `isort src/ tests/`
-- Lint: `ruff check src/ tests/`
-- Type check: `mypy src/`
-- Run all checks: `black . && isort . && ruff check . && mypy . && pytest`
+- Test single file: `uv run pytest tests/test_server.py -v`
+- Test single function: `uv run pytest tests/test_server.py::test_searxng_search_success -v`
+- Run all tests: `uv run pytest -v`
+- Format code: `uv run black src/ tests/`
+- Sort imports: `uv run isort src/ tests/`
+- Lint: `uv run ruff check src/ tests/`
+- Type check: `uv run mypy src/`
+- Run all checks: `uv run black . && uv run isort . && uv run ruff check . && uv run mypy . && uv run pytest`
 - Build package: `uv build`
 - Make sure you clean the cache of uv first before building
 
