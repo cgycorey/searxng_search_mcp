@@ -186,7 +186,7 @@ class SearXNGServer:
         return SearXNGClient(base_url, auth, proxy)
 
     def _setup_handlers(self) -> None:
-        @self.server.list_tools()
+        @self.server.list_tools()  # type: ignore[misc]
         async def handle_list_tools() -> list[types.Tool]:
             return [
                 types.Tool(
@@ -245,7 +245,7 @@ class SearXNGServer:
                 ),
             ]
 
-        @self.server.call_tool()
+        @self.server.call_tool()  # type: ignore[misc]
         async def handle_call_tool(
             name: str, arguments: dict | None
         ) -> list[types.TextContent]:

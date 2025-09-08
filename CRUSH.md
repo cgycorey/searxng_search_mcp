@@ -8,6 +8,7 @@
 - Type check: `mypy src/`
 - Run all checks: `black . && isort . && ruff check . && mypy . && pytest`
 - Build package: `uv build`
+- Make sure you clean the cache of uv first before building
 
 # Code Style Guidelines
 - Use Black formatter with 88-character line length
