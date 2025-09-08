@@ -23,37 +23,34 @@ A robust Python implementation of the SearXNG MCP (Model Context Protocol) serve
 
 ```mermaid
 graph TD
-    A[Client/Claude Desktop] -->|MCP Protocol| B[SearXNG Search MCP Server]
+    A[Client/Claude Desktop] -->|MCP Protocol| B[SearXNGServer]
     B --> C[SearXNGClient]
-    B --> D[Content Processor]
     
-    C -->|HTTP Request| E[SearXNG Instance]
-    E -->|Search Results| C
+    C -->|HTTP Request| D[SearXNG Instance]
+    D -->|Search Results| C
     C -->|Formatted Results| B
     B -->|MCP Response| A
     
-    D -->|HTTP Request| F[Web Pages]
-    F -->|HTML Content| D
-    D -->|Process Content| G[BeautifulSoup]
-    G -->|Clean HTML| H[html2text]
-    H -->|Markdown| D
-    D -->|Multiple Formats| B
-    B -->|Structured Response| A
+    B -->|HTTP Request| E[Web Pages]
+    E -->|HTML Content| B
+    B -->|Process Content| F[BeautifulSoup]
+    F -->|Clean HTML| G[html2text]
+    G -->|Markdown| B
+    B -->|Multiple Formats| A
     
-    I[Environment Variables] --> B
-    I -->|SEARXNG_URL| C
-    I -->|AUTH_USERNAME/PASSWORD| C
-    I -->|HTTP_PROXY/HTTPS_PROXY| C
+    H[Environment Variables] --> B
+    H -->|SEARXNG_URL| C
+    H -->|AUTH_USERNAME/PASSWORD| C
+    H -->|HTTP_PROXY/HTTPS_PROXY| C
     
     style A fill:#e1f5fe
     style B fill:#f3e5f5
     style C fill:#e8f5e8
-    style D fill:#fff3e0
-    style E fill:#fce4ec
-    style F fill:#f1f8e9
-    style G fill:#e0f2f1
-    style H fill:#e8eaf6
-    style I fill:#efebe9
+    style D fill:#fce4ec
+    style E fill:#f1f8e9
+    style F fill:#e0f2f1
+    style G fill:#e8eaf6
+    style H fill:#efebe9
 ```
 
 ## Installation
