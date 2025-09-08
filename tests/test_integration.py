@@ -154,7 +154,7 @@ async def test_client_fetch_url_success() -> None:
 
     assert result == expected_content
     client.fetch_url.assert_called_once_with("https://example.com")
-    
+
     # Test with different URLs
     await client.fetch_url("https://another-example.com")
     assert client.fetch_url.call_count == 2

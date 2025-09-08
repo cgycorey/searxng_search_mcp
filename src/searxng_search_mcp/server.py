@@ -86,7 +86,7 @@ class SearXNGClient:
                 )
                 response.raise_for_status()
                 result = cast(Dict[str, Any], response.json())
-                results_count = len(result.get('results', []))
+                results_count = len(result.get("results", []))
                 logger.info(
                     f"Search completed successfully, found {results_count} result{'' if results_count == 1 else 's'}"
                 )
@@ -134,7 +134,9 @@ class SearXNGClient:
             )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error fetching URL {url[:self.MAX_LOG_LENGTH]}...: {str(e)}")
+            logger.error(
+                f"Unexpected error fetching URL {url[:self.MAX_LOG_LENGTH]}...: {str(e)}"
+            )
             raise
 
 
@@ -284,20 +286,24 @@ class SearXNGServer:
             if not search_results:
                 logger.info("No search results found")
                 return [types.TextContent(type="text", text="No results found")]
-            
+
             formatted_results = []
             for i, result in enumerate(search_results, 1):
-                formatted_results.append(f"**Result {i}: {result.get('title', 'No title')}**")
+                formatted_results.append(
+                    f"**Result {i}: {result.get('title', 'No title')}**"
+                )
                 formatted_results.append(f"URL: {result.get('url', 'No URL')}")
                 if result.get("content"):
                     # Clean up content - remove extra whitespace
-                    content = result['content'].strip()
+                    content = result["content"].strip()
                     if content:
                         formatted_results.append(f"Content: {content}")
                 formatted_results.append("")
 
             response_text = "\n".join(formatted_results)
-            logger.info(f"Returning {len(search_results)} search result{'' if len(search_results) == 1 else 's'}")
+            logger.info(
+                f"Returning {len(search_results)} search result{'' if len(search_results) == 1 else 's'}"
+            )
             return [types.TextContent(type="text", text=response_text)]
 
         except ValueError as e:
@@ -342,8 +348,6 @@ class SearXNGServer:
             script.decompose()
         return soup
 
-    
-
     async def _handle_web_url_read(self, arguments: dict) -> list[types.TextContent]:
         url = arguments.get("url", "")
         output_format = arguments.get("format", "markdown")
@@ -352,8 +356,6 @@ class SearXNGServer:
         if not url.strip():
             logger.warning("Empty URL received")
             return [types.TextContent(type="text", text="URL is required")]
-
-        
 
         try:
             logger.info(f"Fetching web content from: {url[:100]}...")

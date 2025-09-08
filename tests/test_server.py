@@ -93,7 +93,9 @@ def test_searxng_server_initialization() -> None:
 
     # Test without environment variable
     with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(ValueError, match="SEARXNG_URL environment variable is required"):
+        with pytest.raises(
+            ValueError, match="SEARXNG_URL environment variable is required"
+        ):
             SearXNGServer()
 
 
@@ -110,7 +112,7 @@ def test_searxng_server_tools() -> None:
         # We can't easily test the async handlers without a proper MCP setup
         assert hasattr(server, "_handle_web_search")
         assert hasattr(server, "_handle_web_url_read")
-        
+
         # Test that server has the expected server instance
         assert server.server is not None
         assert hasattr(server.server, "list_tools")
@@ -177,7 +179,7 @@ def test_project_structure() -> None:
     assert os.path.exists("LICENSE")
     assert os.path.exists("tests/")
     assert os.path.exists("CRUSH.md")
-    
+
     # Check that tests directory has test files
     test_files = os.listdir("tests/")
     assert len(test_files) > 0
