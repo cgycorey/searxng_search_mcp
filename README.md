@@ -55,6 +55,23 @@ graph TD
 
 ## Installation
 
+### ⚠️ Important First Steps
+
+When cloning this repository, always follow these steps to ensure you have the latest version:
+
+1. **Build the package**:
+   ```bash
+   uv build
+   ```
+
+2. **If you encounter any issues**, clear the cache and rebuild:
+   ```bash
+   uv cache clean
+   uv build
+   ```
+
+3. **Always use the built wheel** from the `dist/` directory for production use.
+
 ### Using uvx (recommended)
 
 ```bash
@@ -300,6 +317,11 @@ notepad %APPDATA%\Claude\claude_desktop_config.json
 ```bash
 uv build
 ```
+
+**Important: If you encounter any issues (e.g., results not showing correctly):**
+- Clear uv cache: `uv cache clean`
+- Rebuild the package: `uv build`
+- Ensure you're using the latest wheel file from the `dist/` directory
 
 **Important:**
 - Replace `/full/path/to/searxng-search-mcp/dist/searxng_search_mcp-0.1.0-py3-none-any.whl` with the actual path to your wheel file
