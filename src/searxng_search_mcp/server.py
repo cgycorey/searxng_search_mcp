@@ -1,6 +1,7 @@
 # SearXNG Search MCP Server
 # This server provides web search and content fetching capabilities via SearXNG
 
+import json
 import logging
 import os
 from typing import Any, Dict, Mapping, Optional, cast
@@ -24,6 +25,9 @@ logger = logging.getLogger(__name__)
 
 class SearXNGClient:
     """Client for interacting with SearXNG search engine."""
+
+    DEFAULT_TIMEOUT = 120.0
+    MAX_LOG_LENGTH = 100
 
     def __init__(
         self, base_url: str, auth: Optional[tuple] = None, proxy: Optional[str] = None
@@ -59,7 +63,7 @@ class SearXNGClient:
         Returns:
             Dictionary containing search results
         """
-        logger.info(f"Performing search query: {query[:100]}...")
+        logger.info(f"Performing search query: {query[:self.MAX_LOG_LENGTH]}...")
 
         params = {
             "q": query,
@@ -75,23 +79,24 @@ class SearXNGClient:
 
         try:
             async with httpx.AsyncClient(
-                auth=self.auth, proxy=self.proxy, timeout=120.0
+                auth=self.auth, proxy=self.proxy, timeout=self.DEFAULT_TIMEOUT
             ) as client:
                 response = await client.get(
                     f"{self.base_url}/search", params=cast(Mapping[str, Any], params)
                 )
                 response.raise_for_status()
                 result = cast(Dict[str, Any], response.json())
+                results_count = len(result.get('results', []))
                 logger.info(
-                    f"Search completed successfully, found {len(result.get('results', []))} results"
+                    f"Search completed successfully, found {results_count} result{'' if results_count == 1 else 's'}"
                 )
                 return result
         except httpx.TimeoutException:
-            logger.error(f"Search timeout for query: {query[:100]}...")
+            logger.error(f"Search timeout for query: {query[:self.MAX_LOG_LENGTH]}...")
             raise
         except httpx.HTTPStatusError as e:
             logger.error(
-                f"HTTP error {e.response.status_code} for search query: {query[:100]}..."
+                f"HTTP error {e.response.status_code} for search query: {query[:self.MAX_LOG_LENGTH]}..."
             )
             raise
         except Exception as e:
@@ -107,34 +112,37 @@ class SearXNGClient:
         Returns:
             The HTML content as a string
         """
-        logger.info(f"Fetching content from URL: {url[:100]}...")
+        logger.info(f"Fetching content from URL: {url[:self.MAX_LOG_LENGTH]}...")
 
         try:
             async with httpx.AsyncClient(
-                auth=self.auth, proxy=self.proxy, timeout=120.0
+                auth=self.auth, proxy=self.proxy, timeout=self.DEFAULT_TIMEOUT
             ) as client:
                 response = await client.get(url)
                 response.raise_for_status()
                 content = response.text
                 logger.info(
-                    f"Successfully fetched {len(content)} characters from {url[:50]}..."
+                    f"Successfully fetched {len(content)} characters from {url[:self.MAX_LOG_LENGTH//2]}..."
                 )
                 return content
         except httpx.TimeoutException:
-            logger.error(f"Timeout fetching URL: {url[:100]}...")
+            logger.error(f"Timeout fetching URL: {url[:self.MAX_LOG_LENGTH]}...")
             raise
         except httpx.HTTPStatusError as e:
             logger.error(
-                f"HTTP error {e.response.status_code} fetching URL: {url[:100]}..."
+                f"HTTP error {e.response.status_code} fetching URL: {url[:self.MAX_LOG_LENGTH]}..."
             )
             raise
         except Exception as e:
-            logger.error(f"Unexpected error fetching URL {url[:100]}...: {str(e)}")
+            logger.error(f"Unexpected error fetching URL {url[:self.MAX_LOG_LENGTH]}...: {str(e)}")
             raise
 
 
 class SearXNGServer:
     """MCP server for SearXNG search functionality."""
+
+    VERSION = "0.1.0"
+    SUPPORTED_FORMATS = ["markdown", "html", "text", "json"]
 
     def __init__(self) -> None:
         """Initialize the SearXNG MCP server."""
@@ -272,20 +280,24 @@ class SearXNGServer:
                 safesearch=safesearch,
             )
 
+            search_results = results.get("results", [])
+            if not search_results:
+                logger.info("No search results found")
+                return [types.TextContent(type="text", text="No results found")]
+            
             formatted_results = []
-            for result in results.get("results", []):
-                formatted_results.append(f"**{result.get('title', 'No title')}**")
+            for i, result in enumerate(search_results, 1):
+                formatted_results.append(f"**Result {i}: {result.get('title', 'No title')}**")
                 formatted_results.append(f"URL: {result.get('url', 'No URL')}")
                 if result.get("content"):
-                    formatted_results.append(f"Content: {result['content']}")
+                    # Clean up content - remove extra whitespace
+                    content = result['content'].strip()
+                    if content:
+                        formatted_results.append(f"Content: {content}")
                 formatted_results.append("")
 
-            response_text = (
-                "\n".join(formatted_results)
-                if formatted_results
-                else "No results found"
-            )
-            logger.info(f"Returning {len(formatted_results)} search results")
+            response_text = "\n".join(formatted_results)
+            logger.info(f"Returning {len(search_results)} search result{'' if len(search_results) == 1 else 's'}")
             return [types.TextContent(type="text", text=response_text)]
 
         except ValueError as e:
@@ -316,6 +328,22 @@ class SearXNGServer:
                 )
             ]
 
+    def _clean_html(self, html_content: str) -> BeautifulSoup:
+        """Clean HTML content by removing scripts and styles.
+
+        Args:
+            html_content: Raw HTML content
+
+        Returns:
+            BeautifulSoup object with cleaned HTML
+        """
+        soup = BeautifulSoup(html_content, "html.parser")
+        for script in soup(["script", "style"]):
+            script.decompose()
+        return soup
+
+    
+
     async def _handle_web_url_read(self, arguments: dict) -> list[types.TextContent]:
         url = arguments.get("url", "")
         output_format = arguments.get("format", "markdown")
@@ -324,6 +352,8 @@ class SearXNGServer:
         if not url.strip():
             logger.warning("Empty URL received")
             return [types.TextContent(type="text", text="URL is required")]
+
+        
 
         try:
             logger.info(f"Fetching web content from: {url[:100]}...")
@@ -335,27 +365,19 @@ class SearXNGServer:
                 logger.info(f"Returning raw content ({len(content)} characters)")
             elif output_format == "html":
                 # Return cleaned HTML
-                soup = BeautifulSoup(html_content, "html.parser")
-                for script in soup(["script", "style"]):
-                    script.decompose()
+                soup = self._clean_html(html_content)
                 content = str(soup)
                 logger.info(
                     f"Returning cleaned HTML content ({len(content)} characters)"
                 )
             elif output_format == "text":
                 # Return plain text
-                soup = BeautifulSoup(html_content, "html.parser")
-                for script in soup(["script", "style"]):
-                    script.decompose()
+                soup = self._clean_html(html_content)
                 content = soup.get_text(separator=" ", strip=True)
                 logger.info(f"Returning plain text content ({len(content)} characters)")
             elif output_format == "json":
                 # Return structured JSON
-                soup = BeautifulSoup(html_content, "html.parser")
-                for script in soup(["script", "style"]):
-                    script.decompose()
-
-                import json
+                soup = self._clean_html(html_content)
 
                 structured_data = {
                     "url": url,
@@ -369,9 +391,7 @@ class SearXNGServer:
                 logger.info(f"Returning JSON content ({len(content)} characters)")
             else:  # markdown (default)
                 # Return markdown
-                soup = BeautifulSoup(html_content, "html.parser")
-                for script in soup(["script", "style"]):
-                    script.decompose()
+                soup = self._clean_html(html_content)
                 content = self.h.handle(str(soup))
                 logger.info(f"Returning markdown content ({len(content)} characters)")
 
@@ -415,7 +435,7 @@ async def main_async() -> None:
             write_stream,
             InitializationOptions(
                 server_name="searxng-search-mcp",
-                server_version="0.1.0",
+                server_version=server.VERSION,
                 capabilities=server.server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},
