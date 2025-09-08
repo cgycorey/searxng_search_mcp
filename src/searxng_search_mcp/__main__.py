@@ -4,16 +4,26 @@ Command-line entry point for SearXNG Search MCP Server
 """
 
 import asyncio
+import logging
 import os
 import sys
 
 from searxng_search_mcp.server import main_async
+
+# Configure logging to stderr for MCP compatibility
+logging.basicConfig(
+    level=logging.WARNING,  # Only show warnings and errors
+    format="%(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr)],  # Explicitly use stderr
+)
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
     """Entry point for console scripts"""
     # Check if SEARXNG_URL is set
     if not os.getenv("SEARXNG_URL"):
+        logger.error("SEARXNG_URL environment variable is required")
         print("Error: SEARXNG_URL environment variable is required", file=sys.stderr)
         print(
             "Example: SEARXNG_URL=https://searx.example.com uvx run searxng-search-mcp",
