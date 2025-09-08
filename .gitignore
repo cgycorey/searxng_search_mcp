@@ -8,9 +8,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -154,9 +152,9 @@ Desktop.ini
 *.tmp
 *.temp
 
-# Build artifacts
-*.whl
-*.tar.gz
+# Build artifacts (uncomment if you want to ignore built packages)
+# *.whl
+# *.tar.gz
 
 # Virtual environment
 .venv/
