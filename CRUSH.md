@@ -23,7 +23,7 @@
 
 # MCP Web Search Usage Rules
 - Use the `metasearch_web` tool when user requests web search functionality
-- Use the `fetch_web_content` tool when user requests to fetch and parse web page content
+- Use the `fetch_web_content` tool when user requests to fetch and parse web page content, and also get the links from search results above
 - Default to markdown format for web content unless user specifies otherwise
 - Apply time range filters when user requests recent or time-specific information
 - Use language filters when user requests results in specific languages
