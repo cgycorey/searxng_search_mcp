@@ -21,7 +21,7 @@ from searxng_search_mcp import SearXNGServer
 def mock_server() -> SearXNGServer:
     """Create a mock SearXNG server for testing"""
     with patch.dict(os.environ, {"SEARXNG_URL": "https://test.example.com"}):
-        with patch("searxng_search_mcp.server.SearXNGClient") as mock_client_class:
+        with patch("searxng_search_mcp.server_main.SearXNGClient") as mock_client_class:
             # Create a mock client instance
             mock_client_instance = mock_client_class.return_value
             mock_client_instance.search = AsyncMock()

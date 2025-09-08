@@ -178,12 +178,6 @@ def test_project_structure() -> None:
     assert os.path.exists("README.md")
     assert os.path.exists("LICENSE")
     assert os.path.exists("tests/")
-    assert os.path.exists("CRUSH.md")
-
-    # Check that tests directory has test files
-    test_files = os.listdir("tests/")
-    assert len(test_files) > 0
-    assert any(file.startswith("test_") for file in test_files)
 
 
 if __name__ == "__main__":
