@@ -19,6 +19,43 @@ A robust Python implementation of the SearXNG MCP (Model Context Protocol) serve
 - 🧹 **Smart Content Processing**: Automatic script/style removal with BeautifulSoup
 - ⚡ **Performance Optimized**: Efficient handling of network requests and timeouts
 
+## Architecture
+
+```mermaid
+graph TD
+    A[Client/Claude Desktop] -->|MCP Protocol| B[SearXNG Search MCP Server]
+    B --> C[SearXNGClient]
+    B --> D[Content Processor]
+    
+    C -->|HTTP Request| E[SearXNG Instance]
+    E -->|Search Results| C
+    C -->|Formatted Results| B
+    B -->|MCP Response| A
+    
+    D -->|HTTP Request| F[Web Pages]
+    F -->|HTML Content| D
+    D -->|Process Content| G[BeautifulSoup]
+    G -->|Clean HTML| H[html2text]
+    H -->|Markdown| D
+    D -->|Multiple Formats| B
+    B -->|Structured Response| A
+    
+    I[Environment Variables] --> B
+    I -->|SEARXNG_URL| C
+    I -->|AUTH_USERNAME/PASSWORD| C
+    I -->|HTTP_PROXY/HTTPS_PROXY| C
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+    style F fill:#f1f8e9
+    style G fill:#e0f2f1
+    style H fill:#e8eaf6
+    style I fill:#efebe9
+```
+
 ## Installation
 
 ### Using uvx (recommended)
