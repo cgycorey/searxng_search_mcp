@@ -2,6 +2,7 @@
 # This server provides web search and content fetching capabilities via SearXNG
 
 import logging
+
 import mcp.server.stdio
 from mcp.server import NotificationOptions
 from mcp.server.models import InitializationOptions

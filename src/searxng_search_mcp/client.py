@@ -3,6 +3,7 @@
 
 import logging
 from typing import Any, Dict, Mapping, Optional, cast
+
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,8 @@ class SearXNGClient:
                 result = cast(Dict[str, Any], response.json())
                 results_count = len(result.get("results", []))
                 logger.info(
-                    f"Search completed successfully, found {results_count} result{'' if results_count == 1 else 's'}"
+                    f"Search completed successfully, found {results_count} "
+                    f"result{'' if results_count == 1 else 's'}"
                 )
                 return result
         except httpx.TimeoutException:
@@ -81,7 +83,8 @@ class SearXNGClient:
             raise
         except httpx.HTTPStatusError as e:
             logger.error(
-                f"HTTP error {e.response.status_code} for search query: {query[:self.MAX_LOG_LENGTH]}..."
+                f"HTTP error {e.response.status_code} for search query: "
+                f"{query[:self.MAX_LOG_LENGTH]}..."
             )
             raise
         except Exception as e:
@@ -107,7 +110,8 @@ class SearXNGClient:
                 response.raise_for_status()
                 content = response.text
                 logger.info(
-                    f"Successfully fetched {len(content)} characters from {url[:self.MAX_LOG_LENGTH//2]}..."
+                    f"Successfully fetched {len(content)} characters from "
+                    f"{url[:self.MAX_LOG_LENGTH//2]}..."
                 )
                 return content
         except httpx.TimeoutException:
@@ -115,11 +119,13 @@ class SearXNGClient:
             raise
         except httpx.HTTPStatusError as e:
             logger.error(
-                f"HTTP error {e.response.status_code} fetching URL: {url[:self.MAX_LOG_LENGTH]}..."
+                f"HTTP error {e.response.status_code} fetching URL: "
+                f"{url[:self.MAX_LOG_LENGTH]}..."
             )
             raise
         except Exception as e:
             logger.error(
-                f"Unexpected error fetching URL {url[:self.MAX_LOG_LENGTH]}...: {str(e)}"
+                f"Unexpected error fetching URL {url[:self.MAX_LOG_LENGTH]}...: "
+                f"{str(e)}"
             )
             raise

@@ -44,7 +44,8 @@ async def test_schema_exposure() -> None:
             print("✅ Found JSON false in source code")
 
         print(
-            "\n📋 The schema in the code uses Python False, which gets converted to JSON false"
+            "\n📋 The schema in the code uses Python False, which gets "
+            "converted to JSON false"
         )
         print("📋 This is the correct approach for Python -> JSON conversion")
 

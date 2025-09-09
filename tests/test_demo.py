@@ -130,7 +130,8 @@ async def demonstrate_search_and_fetch() -> None:
                         if fetch_result and len(fetch_result) > 0:
                             fetched_content = fetch_result[0].text
                             print(
-                                f"✅ Successfully fetched {len(fetched_content)} characters"
+                                f"✅ Successfully fetched "
+                                f"{len(fetched_content)} characters"
                             )
                             print("📝 First 200 characters:")
                             print("-" * 40)

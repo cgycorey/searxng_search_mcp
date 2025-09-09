@@ -4,11 +4,12 @@
 import json
 import logging
 import os
+
+import html2text
 import httpx
 import mcp.types as types
 from bs4 import BeautifulSoup
 from mcp.server import Server
-import html2text
 
 from searxng_search_mcp.client import SearXNGClient
 
@@ -68,7 +69,10 @@ class SearXNGServer:
             return [
                 types.Tool(
                     name="metasearch_web",
-                    description="Search the web using SearXNG. After getting search results, you can fetch full content from any URL using the fetch_web_content tool.",
+                    description=(
+                        "Search the web using SearXNG. After getting search results, "
+                        "you can fetch full content from any URL using the fetch_web_content tool."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -100,7 +104,10 @@ class SearXNGServer:
                 ),
                 types.Tool(
                     name="fetch_web_content",
-                    description="Fetch full content from web page URLs (including URLs from search results). Supports multiple formats: html, markdown, text, json.",
+                    description=(
+                        "Fetch full content from web page URLs (including URLs from search results). "
+                        "Supports multiple formats: html, markdown, text, json."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -120,7 +127,6 @@ class SearXNGServer:
                         "required": ["url"],
                     },
                 ),
-
             ]
 
         @self.server.call_tool()  # type: ignore[misc]
@@ -178,7 +184,8 @@ class SearXNGServer:
 
             response_text = "\n".join(formatted_results)
             logger.info(
-                f"Returning {len(search_results)} search result{'' if len(search_results) == 1 else 's'}"
+                f"Returning {len(search_results)} "
+                f"search result{'' if len(search_results) == 1 else 's'}"
             )
             return [types.TextContent(type="text", text=response_text)]
 
@@ -302,4 +309,3 @@ class SearXNGServer:
             return [
                 types.TextContent(type="text", text=f"Error fetching URL: {str(e)}")
             ]
-
