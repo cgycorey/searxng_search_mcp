@@ -38,7 +38,6 @@ Example:
 
 import asyncio
 import logging
-import os
 import sys
 
 import mcp.server.stdio
@@ -46,42 +45,12 @@ from mcp.server import NotificationOptions
 from mcp.server.models import InitializationOptions
 
 from searxng_search_mcp.server_main import SearXNGServer
+from searxng_search_mcp.utils import setup_logging, validate_environment
 
 # Configure logging to stderr for MCP compatibility
 # Log level can be configured via LOG_LEVEL environment variable
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
+setup_logging("LOG_LEVEL", "INFO")
 logger = logging.getLogger(__name__)
-
-
-def _validate_environment() -> None:
-    """
-    Validate required environment variables and configuration.
-
-    Raises:
-        ValueError: If required environment variables are missing or invalid.
-    """
-    required_vars = ["SEARXNG_URL"]
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-
-    if missing_vars:
-        raise ValueError(
-            f"Missing required environment variables: {', '.join(missing_vars)}. "
-            f"Please set SEARXNG_URL to your SearXNG instance URL."
-        )
-
-    # Validate SEARXNG_URL format
-    searxng_url = os.getenv("SEARXNG_URL", "").strip()
-    if not searxng_url.startswith(("http://", "https://")):
-        raise ValueError(
-            f"SEARXNG_URL must start with http:// or https://, got: {searxng_url}"
-        )
-
-    logger.debug(f"Environment validation passed. SearXNG URL: {searxng_url}")
 
 
 async def main_async() -> None:
@@ -99,7 +68,7 @@ async def main_async() -> None:
     """
     try:
         # Validate environment before starting
-        _validate_environment()
+        validate_environment()
 
         logger.debug("Initializing SearXNG MCP server...")
 

@@ -39,7 +39,10 @@ Error Handling:
 """
 
 import logging
+import os
+import re
 from typing import Any, Dict, Mapping, Optional, cast
+from urllib.parse import urlparse
 
 import httpx
 
@@ -124,9 +127,12 @@ class SearXNGClient:
         self.base_url = base_url.rstrip("/")
         self.auth = auth
         self.proxy = proxy
+        timeout_env = os.getenv("SEARXNG_TIMEOUT")
+        self.timeout = float(timeout_env) if timeout_env else self.DEFAULT_TIMEOUT
 
         # Client initialization details logged at debug level only
         logger.debug(f"Initialized SearXNG client for: {self.base_url}")
+        logger.debug(f"Timeout configured: {self.timeout}s")
         if auth:
             logger.debug("Authentication configured")
         if proxy:
@@ -215,7 +221,7 @@ class SearXNGClient:
 
         try:
             async with httpx.AsyncClient(
-                auth=self.auth, proxy=self.proxy, timeout=self.DEFAULT_TIMEOUT
+                auth=self.auth, proxy=self.proxy, timeout=self.timeout
             ) as client:
                 response = await client.get(
                     f"{self.base_url}/search", params=cast(Mapping[str, Any], params)
@@ -257,8 +263,9 @@ class SearXNGClient:
             without any processing or cleaning.
 
         Raises:
-            httpx.TimeoutException: If the request times out (DEFAULT_TIMEOUT: 120 seconds)
+            httpx.TimeoutException: If the request times out (configurable timeout)
             httpx.HTTPStatusError: If the server returns an HTTP error status
+            ValueError: If the URL is invalid or potentially malicious
             Exception: For unexpected errors during the fetch operation
 
         Example:
@@ -280,12 +287,19 @@ class SearXNGClient:
             - The actual URL requested is not truncated
             - Content length is logged for monitoring purposes
             - This method fetches raw HTML - use server_main.py methods for processed content
+            - Includes basic URL validation to prevent SSRF attacks
         """
+        # Validate URL to prevent SSRF attacks
+        if not self._is_safe_url(url):
+            raise ValueError(
+                f"Invalid or potentially malicious URL: {url[:self.MAX_LOG_LENGTH]}..."
+            )
+
         logger.debug(f"Fetching content from URL: {url[:self.MAX_LOG_LENGTH]}...")
 
         try:
             async with httpx.AsyncClient(
-                auth=self.auth, proxy=self.proxy, timeout=self.DEFAULT_TIMEOUT
+                auth=self.auth, proxy=self.proxy, timeout=self.timeout
             ) as client:
                 response = await client.get(url)
                 response.raise_for_status()
@@ -310,3 +324,58 @@ class SearXNGClient:
                 f"{str(e)}"
             )
             raise
+
+    def _is_safe_url(self, url: str) -> bool:
+        """
+        Validate URL to prevent SSRF attacks and other security issues.
+
+        Args:
+            url: The URL to validate
+
+        Returns:
+            True if the URL is safe, False otherwise
+        """
+        try:
+            parsed = urlparse(url)
+
+            # Check scheme
+            if parsed.scheme not in ("http", "https"):
+                return False
+
+            # Check for private/reserved IP addresses in hostname
+            hostname = parsed.hostname
+            if hostname:
+                # Check for localhost/private IPs
+                if hostname in ("localhost", "127.0.0.1", "::1"):
+                    return False
+
+                # Check for private IP ranges
+                import ipaddress
+
+                try:
+                    ip = ipaddress.ip_address(hostname)
+                    if ip.is_private or ip.is_loopback or ip.is_link_local:
+                        return False
+                except ValueError:
+                    # Not an IP address, continue with hostname validation
+                    pass
+
+                # Check for potentially dangerous hostnames
+                dangerous_patterns = [
+                    r"^192\.168\.",
+                    r"^10\.",
+                    r"^172\.(1[6-9]|2[0-9]|3[01])\.",
+                    r"^127\.",
+                    r"^169\.254\.",
+                    r"^::1$",
+                    r"^localhost$",
+                ]
+
+                for pattern in dangerous_patterns:
+                    if re.match(pattern, hostname):
+                        return False
+
+            return True
+
+        except Exception:
+            return False

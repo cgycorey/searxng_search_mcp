@@ -39,54 +39,18 @@ Example:
 
 import asyncio
 import logging
-import os
 import sys
 
 from searxng_search_mcp.server import main_async
+from searxng_search_mcp.utils import (
+    setup_logging_stderr,
+    validate_environment_with_exit,
+)
 
 # Configure logging to stderr for MCP compatibility
 # Log level can be configured via LOG_LEVEL environment variable
-LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING").upper()
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.WARNING),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stderr)],  # Explicitly use stderr for MCP
-)
+setup_logging_stderr("LOG_LEVEL", "WARNING")
 logger = logging.getLogger(__name__)
-
-
-def _validate_environment() -> None:
-    """
-    Validate required environment variables for console script execution.
-
-    Raises:
-        SystemExit: If required environment variables are missing or invalid.
-    """
-    required_vars = ["SEARXNG_URL"]
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-
-    if missing_vars:
-        logger.error(
-            f"Missing required environment variables: {', '.join(missing_vars)}"
-        )
-        print("Error: SEARXNG_URL environment variable is required", file=sys.stderr)
-        print(
-            "Example: SEARXNG_URL=https://searx.example.com uvx run searxng-search-mcp",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    # Validate SEARXNG_URL format
-    searxng_url = os.getenv("SEARXNG_URL", "").strip()
-    if not searxng_url.startswith(("http://", "https://")):
-        logger.error(f"Invalid SEARXNG_URL format: {searxng_url}")
-        print(
-            f"Error: SEARXNG_URL must start with http:// or https://, got: {searxng_url}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    logger.debug(f"Environment validation passed. SearXNG URL: {searxng_url}")
 
 
 def main() -> None:
@@ -105,7 +69,7 @@ def main() -> None:
     """
     try:
         # Validate environment before starting
-        _validate_environment()
+        validate_environment_with_exit()
 
         logger.debug("Starting SearXNG MCP server from console script...")
         return asyncio.run(main_async())

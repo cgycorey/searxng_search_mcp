@@ -190,8 +190,8 @@ async def test_invalid_url_format() -> None:
                 result = await client.fetch_url(invalid_url)
                 assert result == "<html><body>Content</body></html>"
             except Exception as e:
-                # Some invalid URLs might cause HTTP client errors
-                assert isinstance(e, (httpx.InvalidURL, httpx.HTTPError))
+                # Some invalid URLs might cause HTTP client errors or our validation
+                assert isinstance(e, (httpx.InvalidURL, httpx.HTTPError, ValueError))
 
 
 @pytest.mark.asyncio

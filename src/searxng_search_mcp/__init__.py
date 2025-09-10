@@ -57,5 +57,18 @@ __version__ = "0.1.0"
 
 from searxng_search_mcp.client import SearXNGClient
 from searxng_search_mcp.server_main import SearXNGServer
+from searxng_search_mcp.utils import (
+    setup_logging,
+    setup_logging_stderr,
+    validate_environment,
+    validate_environment_with_exit,
+)
 
-__all__ = ["SearXNGServer", "SearXNGClient"]
+__all__ = [
+    "SearXNGServer",
+    "SearXNGClient",
+    "validate_environment",
+    "validate_environment_with_exit",
+    "setup_logging",
+    "setup_logging_stderr",
+]

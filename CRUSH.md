@@ -4,9 +4,9 @@
 - Run all tests: `uv run pytest -v`
 - Format code: `uv run black src/ tests/`
 - Sort imports: `uv run isort src/ tests/`
-- Lint: `uv run ruff check src/ tests/`
+- Lint: `uv run ruff check src/ tests/ --fix`
 - Type check: `uv run mypy src/`
-- Run all checks: `uv run black . && uv run isort . && uv run ruff check . && uv run mypy . && uv run pytest`
+- Run all checks: `uv run black . && uv run isort . && uv run ruff check . --fix && uv run mypy src/ && uv run pytest`
 - Build package: `uv build`
 - Make sure you clean the cache of uv first before building
 
@@ -17,7 +17,7 @@
 - Use snake_case for variables and functions, PascalCase for classes
 - Use async/await for all HTTP operations
 - Handle exceptions gracefully with try/catch blocks
-- Use httpx for HTTP requests with 120s timeout
+- Use httpx for HTTP requests with configurable timeout (SEARXNG_TIMEOUT env var)
 - Follow strict mypy configuration (no untyped code allowed)
 - Use pytest for testing with @pytest.mark.asyncio for async tests
 
@@ -29,3 +29,11 @@
 - Use language filters when user requests results in specific languages
 - Set appropriate safesearch levels based on content requirements
 - Handle search errors gracefully and provide informative error messages
+
+# New Features Added
+- Configurable timeout via SEARXNG_TIMEOUT environment variable (default: 120s)
+- Content size limits via SEARXNG_MAX_CONTENT_SIZE environment variable (default: 10MB)
+- URL validation to prevent SSRF attacks
+- Shared utilities module (utils.py) to eliminate code duplication
+- Enhanced error handling with specific exception types
+- Improved logging configuration with stderr support for MCP compatibility

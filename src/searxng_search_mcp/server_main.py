@@ -121,6 +121,10 @@ class SearXNGServer:
         self.h.ignore_links = False
 
         self._setup_handlers()
+        
+        # Set content size limit
+        max_content_size_env = os.getenv("SEARXNG_MAX_CONTENT_SIZE")
+        self.MAX_CONTENT_SIZE = int(max_content_size_env) if max_content_size_env else 10485760
 
     def _create_client(self) -> SearXNGClient:
         """Create and configure the SearXNG client.
@@ -334,6 +338,19 @@ class SearXNGServer:
         try:
             logger.debug(f"Fetching web content from: {url[:100]}...")
             html_content = await self.client.fetch_url(url)
+
+            # Check content size limits
+            if len(html_content) > self.MAX_CONTENT_SIZE:
+                logger.warning(
+                    f"Content size {len(html_content)} exceeds limit {self.MAX_CONTENT_SIZE}"
+                )
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=f"Content too large ({len(html_content)} bytes). "
+                        f"Maximum allowed size is {self.MAX_CONTENT_SIZE} bytes.",
+                    )
+                ]
 
             if raw:
                 # Return raw content
