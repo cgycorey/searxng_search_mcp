@@ -1,6 +1,43 @@
 # SearXNG Client Module
 # Handles HTTP communication with SearXNG search engine
 
+"""
+SearXNG Client Module
+
+This module provides the HTTP client for communicating with SearXNG search engine instances.
+It handles search queries, URL fetching, authentication, and proxy configuration.
+
+Key Features:
+    - Asynchronous HTTP client using httpx
+    - Search query execution with configurable parameters
+    - URL content fetching with timeout handling
+    - Basic authentication support
+    - Proxy configuration support
+    - Comprehensive error handling and logging
+    - Configurable timeouts and logging limits
+
+Environment Variables Used:
+    - SEARXNG_URL: Base URL of the SearXNG instance (set in server_main.py)
+    - AUTH_USERNAME: Username for basic authentication (optional)
+    - AUTH_PASSWORD: Password for basic authentication (optional)
+    - HTTP_PROXY/HTTPS_PROXY: Proxy configuration (optional)
+
+Typical Usage:
+    This client is typically instantiated and used by the SearXNGServer class:
+
+    ```python
+    client = SearXNGClient("https://searx.example.com", auth=(user, pass))
+    results = await client.search("query", pageno=1, time_range="week")
+    content = await client.fetch_url("https://example.com")
+    ```
+
+Error Handling:
+    - TimeoutException: When requests exceed the timeout limit
+    - HTTPStatusError: For HTTP error responses
+    - ValueError: For configuration errors
+    - Generic Exception: For unexpected errors
+"""
+
 import logging
 from typing import Any, Dict, Mapping, Optional, cast
 
@@ -10,7 +47,43 @@ logger = logging.getLogger(__name__)
 
 
 class SearXNGClient:
-    """Client for interacting with SearXNG search engine."""
+    """
+    Client for interacting with SearXNG search engine.
+
+    This class provides an asynchronous HTTP client for communicating with
+    SearXNG instances. It handles search queries, URL content fetching,
+    authentication, and proxy configuration.
+
+    Attributes:
+        base_url (str): The base URL of the SearXNG instance (stripped of trailing slashes)
+        auth (Optional[tuple]): Authentication tuple (username, password) if configured
+        proxy (Optional[str]): Proxy URL if configured
+        DEFAULT_TIMEOUT (float): Default timeout for HTTP requests (120 seconds)
+        MAX_LOG_LENGTH (int): Maximum length for logged URLs and queries (100 characters)
+
+    Environment Variables:
+        - SEARXNG_URL: Base URL of the SearXNG instance (required, passed via constructor)
+        - AUTH_USERNAME: Username for basic authentication (optional)
+        - AUTH_PASSWORD: Password for basic authentication (optional)
+        - HTTP_PROXY/HTTPS_PROXY: Proxy configuration (optional)
+
+    Example:
+        ```python
+        # Basic usage
+        client = SearXNGClient("https://searx.example.com")
+        results = await client.search("python programming")
+
+        # With authentication
+        client = SearXNGClient("https://searx.example.com", auth=("user", "pass"))
+
+        # With proxy
+        client = SearXNGClient("https://searx.example.com", proxy="http://proxy:8080")
+        ```
+
+    Note:
+        This client is designed to be used within an async context.
+        All methods are asynchronous and should be awaited.
+    """
 
     DEFAULT_TIMEOUT = 120.0
     MAX_LOG_LENGTH = 100
@@ -18,16 +91,46 @@ class SearXNGClient:
     def __init__(
         self, base_url: str, auth: Optional[tuple] = None, proxy: Optional[str] = None
     ):
-        """Initialize the SearXNG client.
+        """
+        Initialize the SearXNG client.
 
         Args:
-            base_url: The base URL of the SearXNG instance
-            auth: Optional authentication tuple (username, password)
-            proxy: Optional proxy URL
+            base_url: The base URL of the SearXNG instance (e.g., "https://searx.example.com")
+            auth: Optional authentication tuple (username, password) for basic auth
+            proxy: Optional proxy URL for HTTP requests (e.g., "http://proxy:8080")
+
+        Example:
+            ```python
+            # Basic client
+            client = SearXNGClient("https://searx.be")
+
+            # Client with authentication
+            client = SearXNGClient(
+                "https://searx.example.com",
+                auth=("username", "password")
+            )
+
+            # Client with proxy
+            client = SearXNGClient(
+                "https://searx.example.com",
+                proxy="http://proxy.example.com:8080"
+            )
+            ```
+
+        Note:
+            The base_url will be stripped of trailing slashes automatically.
+            Authentication and proxy are optional and can be None.
         """
         self.base_url = base_url.rstrip("/")
         self.auth = auth
         self.proxy = proxy
+
+        # Client initialization details logged at debug level only
+        logger.debug(f"Initialized SearXNG client for: {self.base_url}")
+        if auth:
+            logger.debug("Authentication configured")
+        if proxy:
+            logger.debug(f"Proxy configured: {proxy}")
 
     async def search(
         self,
@@ -37,19 +140,66 @@ class SearXNGClient:
         language: Optional[str] = None,
         safesearch: int = 0,
     ) -> Dict[str, Any]:
-        """Perform a search query against SearXNG.
+        """
+        Perform a search query against SearXNG.
+
+        This method sends a search request to the configured SearXNG instance
+        and returns the results in JSON format. It supports various search
+        parameters to refine the search results.
 
         Args:
-            query: Search query string
-            pageno: Page number for results pagination
-            time_range: Time range filter (day, week, month, year)
-            language: Language code for results
-            safesearch: Safe search level (0: none, 1: moderate, 2: strict)
+            query: Search query string (required)
+            pageno: Page number for results pagination (default: 1)
+            time_range: Time range filter - "day", "week", "month", or "year" (optional)
+            language: Language code for results (e.g., "en", "de", "fr") (optional)
+            safesearch: Safe search level - 0 (none), 1 (moderate), 2 (strict) (default: 0)
 
         Returns:
-            Dictionary containing search results
+            Dictionary containing search results with the following structure:
+            ```python
+            {
+                "query": "search query",
+                "number_of_results": 123,
+                "results": [
+                    {
+                        "title": "Result title",
+                        "url": "https://example.com",
+                        "content": "Snippet content...",
+                        "engine": "google",
+                        # ... other engine-specific fields
+                    },
+                    # ... more results
+                ],
+                # ... other metadata
+            }
+            ```
+
+        Raises:
+            httpx.TimeoutException: If the search request times out
+            httpx.HTTPStatusError: If the SearXNG server returns an HTTP error
+            Exception: For unexpected errors during the search
+
+        Example:
+            ```python
+            # Basic search
+            results = await client.search("python programming")
+
+            # Search with time filter
+            results = await client.search(
+                "python programming",
+                time_range="week",
+                language="en"
+            )
+
+            # Paginated search
+            results = await client.search("python", pageno=2)
+            ```
+
+        Note:
+            Search queries are truncated in logs to MAX_LOG_LENGTH (100 characters)
+            for privacy and readability. The actual query sent to SearXNG is not truncated.
         """
-        logger.info(f"Performing search query: {query[:self.MAX_LOG_LENGTH]}...")
+        logger.debug(f"Performing search query: {query[:self.MAX_LOG_LENGTH]}...")
 
         params = {
             "q": query,
@@ -73,7 +223,7 @@ class SearXNGClient:
                 response.raise_for_status()
                 result = cast(Dict[str, Any], response.json())
                 results_count = len(result.get("results", []))
-                logger.info(
+                logger.debug(
                     f"Search completed successfully, found {results_count} "
                     f"result{'' if results_count == 1 else 's'}"
                 )
@@ -92,15 +242,46 @@ class SearXNGClient:
             raise
 
     async def fetch_url(self, url: str) -> str:
-        """Fetch content from a URL.
+        """
+        Fetch content from a URL.
+
+        This method retrieves the HTML content from the specified URL using
+        the same authentication and proxy configuration as the search client.
+        It's commonly used to fetch full content of URLs found in search results.
 
         Args:
-            url: The URL to fetch content from
+            url: The URL to fetch content from (must be a valid HTTP/HTTPS URL)
 
         Returns:
-            The HTML content as a string
+            The HTML content as a string. The content is returned as-is
+            without any processing or cleaning.
+
+        Raises:
+            httpx.TimeoutException: If the request times out (DEFAULT_TIMEOUT: 120 seconds)
+            httpx.HTTPStatusError: If the server returns an HTTP error status
+            Exception: For unexpected errors during the fetch operation
+
+        Example:
+            ```python
+            # Fetch content from a URL
+            html_content = await client.fetch_url("https://example.com")
+            print(f"Fetched {len(html_content)} characters")
+
+            # Fetch content from a search result URL
+            search_results = await client.search("python tutorial")
+            if search_results["results"]:
+                first_url = search_results["results"][0]["url"]
+                content = await client.fetch_url(first_url)
+            ```
+
+        Note:
+            - Uses the same timeout, authentication, and proxy settings as search requests
+            - URLs are truncated in logs to MAX_LOG_LENGTH (100 characters) for readability
+            - The actual URL requested is not truncated
+            - Content length is logged for monitoring purposes
+            - This method fetches raw HTML - use server_main.py methods for processed content
         """
-        logger.info(f"Fetching content from URL: {url[:self.MAX_LOG_LENGTH]}...")
+        logger.debug(f"Fetching content from URL: {url[:self.MAX_LOG_LENGTH]}...")
 
         try:
             async with httpx.AsyncClient(
@@ -109,7 +290,7 @@ class SearXNGClient:
                 response = await client.get(url)
                 response.raise_for_status()
                 content = response.text
-                logger.info(
+                logger.debug(
                     f"Successfully fetched {len(content)} characters from "
                     f"{url[:self.MAX_LOG_LENGTH//2]}..."
                 )

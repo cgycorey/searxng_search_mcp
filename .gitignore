@@ -158,3 +158,4 @@ Desktop.ini
 
 # Virtual environment
 .venv/
+.llxprt/settings.json

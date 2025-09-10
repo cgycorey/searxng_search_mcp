@@ -1,6 +1,53 @@
 # SearXNG Server Module
 # Main MCP server implementation
 
+"""
+SearXNG Server Module
+
+This module contains the main MCP (Model Context Protocol) server implementation
+for SearXNG search functionality. It provides the core server logic, tool definitions,
+and request handling for web search and URL content fetching capabilities.
+
+Key Features:
+    - MCP server implementation with stdio transport
+    - Web search tool with configurable parameters
+    - URL content fetching with multiple output formats
+    - Comprehensive error handling and logging
+    - Tool registration and capability management
+    - HTML cleaning and content processing
+
+Architecture:
+    - SearXNGServer: Main server class implementing MCP protocol
+    - Tool handlers for search and content fetching
+    - HTML processing utilities
+    - Environment configuration management
+
+MCP Tools Provided:
+    - metasearch_web: Search the web using SearXNG
+    - fetch_web_content: Fetch and process web page content
+
+Environment Variables:
+    - SEARXNG_URL: Base URL of the SearXNG instance (required)
+    - AUTH_USERNAME: Username for basic authentication (optional)
+    - AUTH_PASSWORD: Password for basic authentication (optional)
+    - HTTP_PROXY/HTTPS_PROXY: Proxy configuration (optional)
+
+Dependencies:
+    - mcp: Model Context Protocol framework
+    - httpx: HTTP client library
+    - html2text: HTML to Markdown converter
+    - beautifulsoup4: HTML parsing and cleaning
+    - searxng_search_mcp.client: SearXNG HTTP client
+
+Usage:
+    This server is typically instantiated and run by the server.py entry point:
+
+    ```python
+    server = SearXNGServer()
+    await server.server.run(read_stream, write_stream, initialization_options)
+    ```
+"""
+
 import json
 import logging
 import os
@@ -17,7 +64,51 @@ logger = logging.getLogger(__name__)
 
 
 class SearXNGServer:
-    """MCP server for SearXNG search functionality."""
+    """
+    MCP server for SearXNG search functionality.
+
+    This class implements the main MCP (Model Context Protocol) server that provides
+    web search and URL content fetching capabilities through SearXNG integration.
+    It handles tool registration, request processing, and response formatting.
+
+    Attributes:
+        VERSION (str): Server version string
+        SUPPORTED_FORMATS (list): List of supported output formats for content fetching
+        server (Server): MCP server instance
+        client (SearXNGClient): HTTP client for SearXNG communication
+        h (HTML2Text): HTML to Markdown converter instance
+
+    Environment Variables:
+        - SEARXNG_URL: Base URL of the SearXNG instance (required)
+        - AUTH_USERNAME: Username for basic authentication (optional)
+        - AUTH_PASSWORD: Password for basic authentication (optional)
+        - HTTP_PROXY/HTTPS_PROXY: Proxy configuration (optional)
+
+    MCP Tools Provided:
+        - metasearch_web: Search the web using SearXNG with various parameters
+        - fetch_web_content: Fetch and process web page content in multiple formats
+
+    Example:
+        ```python
+        # Create server instance
+        server = SearXNGServer()
+
+        # Server will automatically register tools and handle MCP protocol
+        # The server is typically run via stdio transport:
+        # await server.server.run(read_stream, write_stream, initialization_options)
+        ```
+
+    Architecture:
+        - Uses MCP Server class for protocol handling
+        - Integrates with SearXNGClient for HTTP communication
+        - Provides HTML cleaning and content processing utilities
+        - Implements comprehensive error handling and logging
+        - Supports multiple output formats (markdown, html, text, json)
+
+    Note:
+        This server is designed to be used with stdio transport and is typically
+        instantiated and managed by the server.py entry point module.
+    """
 
     VERSION = "0.1.0"
     SUPPORTED_FORMATS = ["markdown", "html", "text", "json"]
@@ -59,7 +150,7 @@ class SearXNGServer:
 
         proxy = os.getenv("HTTP_PROXY") or os.getenv("HTTPS_PROXY")
         if proxy:
-            logger.info(f"Using proxy: {proxy}")
+            logger.debug(f"Using proxy: {proxy}")
 
         return SearXNGClient(base_url, auth, proxy)
 
@@ -155,7 +246,7 @@ class SearXNGServer:
             return [types.TextContent(type="text", text="Search query is required")]
 
         try:
-            logger.info(f"Executing web search for query: {query[:100]}...")
+            logger.debug(f"Executing web search for query: {query[:100]}...")
             results = await self.client.search(
                 query=query,
                 pageno=pageno,
@@ -166,7 +257,7 @@ class SearXNGServer:
 
             search_results = results.get("results", [])
             if not search_results:
-                logger.info("No search results found")
+                logger.debug("No search results found")
                 return [types.TextContent(type="text", text="No results found")]
 
             formatted_results = []
@@ -183,7 +274,7 @@ class SearXNGServer:
                 formatted_results.append("")
 
             response_text = "\n".join(formatted_results)
-            logger.info(
+            logger.debug(
                 f"Returning {len(search_results)} "
                 f"search result{'' if len(search_results) == 1 else 's'}"
             )
@@ -241,25 +332,27 @@ class SearXNGServer:
             return [types.TextContent(type="text", text="URL is required")]
 
         try:
-            logger.info(f"Fetching web content from: {url[:100]}...")
+            logger.debug(f"Fetching web content from: {url[:100]}...")
             html_content = await self.client.fetch_url(url)
 
             if raw:
                 # Return raw content
                 content = html_content
-                logger.info(f"Returning raw content ({len(content)} characters)")
+                logger.debug(f"Returning raw content ({len(content)} characters)")
             elif output_format == "html":
                 # Return cleaned HTML
                 soup = self._clean_html(html_content)
                 content = str(soup)
-                logger.info(
+                logger.debug(
                     f"Returning cleaned HTML content ({len(content)} characters)"
                 )
             elif output_format == "text":
                 # Return plain text
                 soup = self._clean_html(html_content)
                 content = soup.get_text(separator=" ", strip=True)
-                logger.info(f"Returning plain text content ({len(content)} characters)")
+                logger.debug(
+                    f"Returning plain text content ({len(content)} characters)"
+                )
             elif output_format == "json":
                 # Return structured JSON
                 soup = self._clean_html(html_content)
@@ -273,12 +366,12 @@ class SearXNGServer:
                     "metadata": {"length": len(html_content), "format": "json"},
                 }
                 content = json.dumps(structured_data, indent=2, ensure_ascii=False)
-                logger.info(f"Returning JSON content ({len(content)} characters)")
+                logger.debug(f"Returning JSON content ({len(content)} characters)")
             else:  # markdown (default)
                 # Return markdown
                 soup = self._clean_html(html_content)
                 content = self.h.handle(str(soup))
-                logger.info(f"Returning markdown content ({len(content)} characters)")
+                logger.debug(f"Returning markdown content ({len(content)} characters)")
 
             return [types.TextContent(type="text", text=content)]
 
