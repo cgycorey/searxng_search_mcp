@@ -27,7 +27,6 @@ def validate_environment() -> None:
 
     Raises:
         ValueError: If required environment variables are missing or invalid.
-        SystemExit: If called from a context that requires immediate exit.
 
     Example:
         ```python
@@ -48,19 +47,7 @@ def validate_environment() -> None:
         )
         raise ValueError(error_msg)
 
-    # Validate SEARXNG_URL format
-    searxng_url = os.getenv("SEARXNG_URL", "").strip()
-    if not searxng_url.startswith(("http://", "https://")):
-        raise ValueError(
-            f"SEARXNG_URL must start with http:// or https://, got: {searxng_url}"
-        )
-
-    # Additional validation for URL format
-    if not searxng_url.replace("http://", "").replace("https://", "").strip():
-        raise ValueError("SEARXNG_URL cannot be empty")
-
-    logger = logging.getLogger(__name__)
-    logger.debug(f"Environment validation passed. SearXNG URL: {searxng_url}")
+    _validate_searxng_url_format()
 
 
 def validate_environment_with_exit() -> None:
@@ -96,16 +83,32 @@ def validate_environment_with_exit() -> None:
         )
         sys.exit(1)
 
-    # Validate SEARXNG_URL format
-    searxng_url = os.getenv("SEARXNG_URL", "").strip()
-    if not searxng_url.startswith(("http://", "https://")):
+    try:
+        _validate_searxng_url_format()
+    except ValueError as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Invalid SEARXNG_URL format: {searxng_url}")
-        print(
-            f"Error: SEARXNG_URL must start with http:// or https://, got: {searxng_url}",
-            file=sys.stderr,
-        )
+        logger.error(f"Invalid SEARXNG_URL format: {e}")
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
+
+def _validate_searxng_url_format() -> None:
+    """
+    Validate the format of SEARXNG_URL.
+
+    Raises:
+        ValueError: If SEARXNG_URL format is invalid.
+    """
+    searxng_url = os.getenv("SEARXNG_URL", "").strip()
+
+    if not searxng_url.startswith(("http://", "https://")):
+        raise ValueError(
+            f"SEARXNG_URL must start with http:// or https://, got: {searxng_url}"
+        )
+
+    # Additional validation for URL format
+    if not searxng_url.replace("http://", "").replace("https://", "").strip():
+        raise ValueError("SEARXNG_URL cannot be empty")
 
     logger = logging.getLogger(__name__)
     logger.debug(f"Environment validation passed. SearXNG URL: {searxng_url}")
@@ -164,3 +167,4 @@ def setup_logging_stderr(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[logging.StreamHandler(sys.stderr)],
     )
+

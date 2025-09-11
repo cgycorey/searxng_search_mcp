@@ -519,3 +519,4 @@ class SearXNGServer:
                     type="text", text=f"Error performing analysis: {str(e)}"
                 )
             ]
+

@@ -1,41 +1,14 @@
-# SearXNG Client Module
-# Handles HTTP communication with SearXNG search engine
-
 """
 SearXNG Client Module
 
 This module provides the HTTP client for communicating with SearXNG search engine instances.
 It handles search queries, URL fetching, authentication, and proxy configuration.
 
-Key Features:
-    - Asynchronous HTTP client using httpx
-    - Search query execution with configurable parameters
-    - URL content fetching with timeout handling
-    - Basic authentication support
-    - Proxy configuration support
-    - Comprehensive error handling and logging
-    - Configurable timeouts and logging limits
-
 Environment Variables Used:
     - SEARXNG_URL: Base URL of the SearXNG instance (set in server_main.py)
     - AUTH_USERNAME: Username for basic authentication (optional)
     - AUTH_PASSWORD: Password for basic authentication (optional)
     - HTTP_PROXY/HTTPS_PROXY: Proxy configuration (optional)
-
-Typical Usage:
-    This client is typically instantiated and used by the SearXNGServer class:
-
-    ```python
-    client = SearXNGClient("https://searx.example.com", auth=(user, pass))
-    results = await client.search("query", pageno=1, time_range="week")
-    content = await client.fetch_url("https://example.com")
-    ```
-
-Error Handling:
-    - TimeoutException: When requests exceed the timeout limit
-    - HTTPStatusError: For HTTP error responses
-    - ValueError: For configuration errors
-    - Generic Exception: For unexpected errors
 """
 
 import logging
@@ -63,29 +36,6 @@ class SearXNGClient:
         proxy (Optional[str]): Proxy URL if configured
         DEFAULT_TIMEOUT (float): Default timeout for HTTP requests (120 seconds)
         MAX_LOG_LENGTH (int): Maximum length for logged URLs and queries (100 characters)
-
-    Environment Variables:
-        - SEARXNG_URL: Base URL of the SearXNG instance (required, passed via constructor)
-        - AUTH_USERNAME: Username for basic authentication (optional)
-        - AUTH_PASSWORD: Password for basic authentication (optional)
-        - HTTP_PROXY/HTTPS_PROXY: Proxy configuration (optional)
-
-    Example:
-        ```python
-        # Basic usage
-        client = SearXNGClient("https://searx.example.com")
-        results = await client.search("python programming")
-
-        # With authentication
-        client = SearXNGClient("https://searx.example.com", auth=("user", "pass"))
-
-        # With proxy
-        client = SearXNGClient("https://searx.example.com", proxy="http://proxy:8080")
-        ```
-
-    Note:
-        This client is designed to be used within an async context.
-        All methods are asynchronous and should be awaited.
     """
 
     DEFAULT_TIMEOUT = 120.0
@@ -379,3 +329,4 @@ class SearXNGClient:
 
         except Exception:
             return False
+

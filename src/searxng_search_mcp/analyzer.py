@@ -828,3 +828,4 @@ class SearchResultAnalyzer:
                 )
 
         return insights
+

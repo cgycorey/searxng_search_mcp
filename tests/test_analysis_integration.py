@@ -128,8 +128,8 @@ class TestAnalysisIntegration:
                         "search_results": sample_results,
                         "analysis_type": analysis_type,
                     },
-            ),
-        )
+                ),
+            )
 
             result = await server._handle_analyze_search_results(
                 request.params.arguments
@@ -235,7 +235,6 @@ class TestAnalysisIntegration:
                 arguments={"query": "climate change research"},
             ),
         )
-        
 
         search_result = await server._handle_web_search(search_request.params.arguments)
         assert len(search_result) == 1
