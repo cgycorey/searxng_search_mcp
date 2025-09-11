@@ -1,9 +1,10 @@
 # SearXNG Search MCP Server
 
-A robust Python implementation of the SearXNG MCP (Model Context Protocol) server that enables LLM web search capabilities. This server provides two main tools:
+A robust Python implementation of the SearXNG MCP (Model Context Protocol) server that enables LLM web search capabilities. This server provides three main tools:
 
 - `metasearch_web`: Search the web using any SearXNG instance
 - `fetch_web_content`: Fetch and convert web page content to markdown
+- `analyze_search_results`: Analyze search results with insights, trends, and metrics
 
 **Repository**: https://github.com/cgycorey/searxng_search_mcp
 
@@ -11,6 +12,7 @@ A robust Python implementation of the SearXNG MCP (Model Context Protocol) serve
 
 - 🔍 **Web Search**: Search using any SearXNG instance with pagination, time filtering, language selection, and safe search
 - 🌐 **URL Fetching**: Fetch and convert web pages to clean markdown, HTML, text, or JSON
+- 📊 **Result Analysis**: Analyze search results with insights, trends, keywords, and domain metrics
 - 🔐 **Authentication**: Support for basic auth protected SearXNG instances
 - 🛡️ **Proxy Support**: HTTP/HTTPS proxy support for restricted networks
 - 📦 **uvx Compatible**: Run without installation using uvx
@@ -38,10 +40,14 @@ graph TD
     G -->|Markdown| B
     B -->|Multiple Formats| A
     
-    H[Environment Variables] --> B
-    H -->|SEARXNG_URL| C
-    H -->|AUTH_USERNAME/PASSWORD| C
-    H -->|HTTP_PROXY/HTTPS_PROXY| C
+    B -->|Analyze Results| H[Analysis Engine]
+    H -->|Metrics & Insights| B
+    B -->|Analysis Response| A
+    
+    I[Environment Variables] --> B
+    I -->|SEARXNG_URL| C
+    I -->|AUTH_USERNAME/PASSWORD| C
+    I -->|HTTP_PROXY/HTTPS_PROXY| C
     
     style A fill:#e1f5fe
     style B fill:#f3e5f5
@@ -50,7 +56,8 @@ graph TD
     style E fill:#f1f8e9
     style F fill:#e0f2f1
     style G fill:#e8eaf6
-    style H fill:#efebe9
+    style H fill:#fff3e0
+    style I fill:#efebe9
 ```
 
 ## Installation
@@ -157,6 +164,22 @@ Search the web using SearXNG.
 - `language` (optional): Language code (e.g., `en`, `de`, `fr`)
 - `safesearch` (optional): Safe search level (0: none, 1: moderate, 2: strict)
 
+### analyze_search_results
+
+Analyze search results to extract insights, patterns, and actionable information.
+
+**Parameters:**
+- `search_results` (required): Array of search result objects from metasearch_web
+- `analysis_type` (optional): Type of analysis (`summary`, `trends`, `sources`, `keywords`, `relevance`) - default: `summary`
+- `max_results` (optional): Maximum number of results to analyze (default: 10)
+
+**Supported Analysis Types:**
+- **summary**: Overall summary with themes and key insights
+- **trends**: Trend analysis and patterns in results
+- **sources**: Source/domain analysis and credibility assessment
+- **keywords**: Keyword frequency and semantic analysis
+- **relevance**: Relevance scoring and content quality assessment
+
 ### fetch_web_content
 
 Fetch web page content in multiple formats.
@@ -215,9 +238,10 @@ searxng-search-mcp/
 
 Here's how to use the server in a typical workflow:
 
-1. **Search for content**
-2. **Extract URLs from search results**
-3. **Fetch content from specific URLs**
+1. **Search for content** using `metasearch_web`
+2. **Analyze results** using `analyze_search_results` for insights and patterns
+3. **Extract URLs** from search results
+4. **Fetch content** from specific URLs using `fetch_web_content`
 
 ```python
 # Example usage (requires MCP client setup)
@@ -230,6 +254,14 @@ async def demo():
     # Search
     search_args = {"query": "python programming tutorial"}
     search_results = await server._handle_web_search(search_args)
+    
+    # Analyze results for insights
+    analysis_args = {
+        "search_results": search_results,
+        "analysis_type": "summary",
+        "max_results": 10
+    }
+    analysis = await server._handle_analyze_search_results(analysis_args)
     
     # Fetch content in different formats
     fetch_markdown = {"url": "https://example.com", "format": "markdown"}
@@ -244,6 +276,30 @@ async def demo():
     #   "html": "<html>...</html>",
     #   "markdown": "# Markdown content...",
     #   "metadata": {"length": 1234, "format": "json"}
+    # }
+    
+    # Analysis results include:
+    # {
+    #   "analysis_type": "summary",
+    #   "metrics": {
+    #     "total_results": 10,
+    #     "unique_domains": 8,
+    #     "domain_diversity": 0.8,
+    #     "coverage_score": 0.9
+    #   },
+    #   "themes": ["python", "tutorial", "programming"],
+    #   "top_keywords": [
+    #     {"keyword": "python", "frequency": 15},
+    #     {"keyword": "tutorial", "frequency": 8}
+    #   ],
+    #   "top_domains": [
+    #     ["w3schools.com", 2],
+    #     ["python.org", 1]
+    #   ],
+    #   "insights": [
+    #     "Primary themes identified: python, tutorial",
+    #     "High domain diversity indicates broad coverage"
+    #   ]
     # }
 ```
 

@@ -58,6 +58,7 @@ import mcp.types as types
 from bs4 import BeautifulSoup
 from mcp.server import Server
 
+from searxng_search_mcp.analyzer import SearchResultAnalyzer
 from searxng_search_mcp.client import SearXNGClient
 
 logger = logging.getLogger(__name__)
@@ -119,12 +120,15 @@ class SearXNGServer:
         self.client = self._create_client()
         self.h = html2text.HTML2Text()
         self.h.ignore_links = False
+        self.analyzer = SearchResultAnalyzer()
 
         self._setup_handlers()
-        
+
         # Set content size limit
         max_content_size_env = os.getenv("SEARXNG_MAX_CONTENT_SIZE")
-        self.MAX_CONTENT_SIZE = int(max_content_size_env) if max_content_size_env else 10485760
+        self.MAX_CONTENT_SIZE = (
+            int(max_content_size_env) if max_content_size_env else 10485760
+        )
 
     def _create_client(self) -> SearXNGClient:
         """Create and configure the SearXNG client.
@@ -222,6 +226,48 @@ class SearXNGServer:
                         "required": ["url"],
                     },
                 ),
+                types.Tool(
+                    name="analyze_search_results",
+                    description=(
+                        "Analyze search results to extract insights, patterns, and actionable information. "
+                        "Provides multiple analysis types: summary, trends, sources, keywords, relevance."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "search_results": {
+                                "type": "array",
+                                "description": "Array of search result objects from metasearch_web",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "title": {"type": "string"},
+                                        "url": {"type": "string"},
+                                        "content": {"type": "string"},
+                                    },
+                                },
+                            },
+                            "analysis_type": {
+                                "type": "string",
+                                "description": "Type of analysis to perform",
+                                "enum": [
+                                    "summary",
+                                    "trends",
+                                    "sources",
+                                    "keywords",
+                                    "relevance",
+                                ],
+                                "default": "summary",
+                            },
+                            "max_results": {
+                                "type": "integer",
+                                "description": "Maximum number of results to analyze (default: 10)",
+                                "default": 10,
+                            },
+                        },
+                        "required": ["search_results"],
+                    },
+                ),
             ]
 
         @self.server.call_tool()  # type: ignore[misc]
@@ -235,6 +281,8 @@ class SearXNGServer:
                 return await self._handle_web_search(arguments)
             elif name == "fetch_web_content":
                 return await self._handle_web_url_read(arguments)
+            elif name == "analyze_search_results":
+                return await self._handle_analyze_search_results(arguments)
             else:
                 raise ValueError(f"Unknown tool: {name}")
 
@@ -418,4 +466,56 @@ class SearXNGServer:
             logger.error(f"Unexpected error fetching URL {url[:100]}...: {str(e)}")
             return [
                 types.TextContent(type="text", text=f"Error fetching URL: {str(e)}")
+            ]
+
+    async def _handle_analyze_search_results(
+        self, arguments: dict
+    ) -> list[types.TextContent]:
+        """Handle search result analysis requests."""
+        search_results = arguments.get("search_results", [])
+        analysis_type = arguments.get("analysis_type", "summary")
+        max_results = arguments.get("max_results", 10)
+
+        if not search_results:
+            logger.warning("Empty search results received for analysis")
+            return [
+                types.TextContent(
+                    type="text", text="Search results are required for analysis"
+                )
+            ]
+
+        try:
+            logger.debug(
+                f"Analyzing {len(search_results)} search results with type: {analysis_type}"
+            )
+
+            # Configure analyzer with max results
+            self.analyzer.max_results = max_results
+
+            # Perform analysis
+            analysis_results = self.analyzer.analyze_search_results(
+                search_results=search_results, analysis_type=analysis_type
+            )
+
+            # Format results as JSON
+            response_text = json.dumps(analysis_results, indent=2, ensure_ascii=False)
+            logger.debug(
+                f"Analysis completed successfully. Results length: {len(response_text)} characters"
+            )
+
+            return [types.TextContent(type="text", text=response_text)]
+
+        except ValueError as e:
+            logger.error(f"Analysis configuration error: {str(e)}")
+            return [
+                types.TextContent(
+                    type="text", text=f"Analysis configuration error: {str(e)}"
+                )
+            ]
+        except Exception as e:
+            logger.error(f"Unexpected error during analysis: {str(e)}")
+            return [
+                types.TextContent(
+                    type="text", text=f"Error performing analysis: {str(e)}"
+                )
             ]
